@@ -156,7 +156,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
                     progress.Report(20);
                     await webClient.DownloadFileTaskAsync(new Uri(fileToDownload), zipFilePath);
                     progress.Report(50);
-                    ZipFile.ExtractToDirectory(zipFilePath, destinationFolder);
+                    ZipFile.ExtractToDirectory(zipFilePath, destinationFolder, overwriteFiles: true);
                     progress.Report(90);
 
                     File.Delete(zipFilePath);
