@@ -210,7 +210,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             if (result == DialogResult.Yes)
                 Application.Exit();
             else if (result == DialogResult.No)
-                cancelEventArgs.Cancel = false;
+                cancelEventArgs.Cancel = true;
 
         }
     }
