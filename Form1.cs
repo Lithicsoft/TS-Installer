@@ -7,6 +7,7 @@
  */
 
 using IWshRuntimeLibrary;
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using File = System.IO.File;
@@ -18,6 +19,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
         public Form1()
         {
             InitializeComponent();
+            this.Closing += OnClosing;
 
             if (File.Exists("build.txt") || Directory.Exists("Lithicsoft Trainer Studio"))
             {
@@ -198,6 +200,18 @@ namespace Lithicsoft_Trainer_Studio_Installer
             startMenuShortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
             startMenuShortcut.TargetPath = targetFileLocation;
             startMenuShortcut.Save();
+        }
+
+        private void OnClosing(object sender, CancelEventArgs cancelEventArgs)
+        {
+            string msg = "Do you want to exit Trainer Studio Installer?";
+            DialogResult result = MessageBox.Show(msg, "Close Confirmation",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+                Application.Exit();
+            else if (result == DialogResult.No)
+                cancelEventArgs.Cancel = false;
+
         }
     }
 }
