@@ -5,10 +5,10 @@
 Lithicsoft Trainer Studio is a tool that allows you to create artificial intelligence models without coding directly on your training data.
 
 ![Shields](https://img.shields.io/github/v/release/Lithicsoft/Lithicsoft-Trainer-Studio)
-![License](https://img.shields.io/github/license/Lithicsoft/TS-Source)
-![Stars](https://img.shields.io/github/stars/Lithicsoft/TS-Source)
-![Forks](https://img.shields.io/github/forks/Lithicsoft/TS-Source)
-![Issues](https://img.shields.io/github/issues/Lithicsoft/TS-Source)
+![License](https://img.shields.io/github/license/Lithicsoft/TS-Installer)
+![Stars](https://img.shields.io/github/stars/Lithicsoft/TS-Installer)
+![Forks](https://img.shields.io/github/forks/Lithicsoft/TS-Installer)
+![Issues](https://img.shields.io/github/issues/Lithicsoft/TS-Installer)
 
 ## Features
 
