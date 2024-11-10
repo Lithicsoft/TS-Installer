@@ -10,36 +10,42 @@ using IWshRuntimeLibrary;
 using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
+using System.Windows.Forms;
 using File = System.IO.File;
 
 namespace Lithicsoft_Trainer_Studio_Installer
 {
     public partial class Form1 : Form
     {
+        private readonly NotifyIcon notifyIcon;
+
         public Form1()
         {
             InitializeComponent();
             this.Closing += OnClosing;
 
+            notifyIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Information,
+                Visible = true
+            };
+
             if (File.Exists("build.txt") || Directory.Exists("Lithicsoft Trainer Studio"))
             {
                 button3.Enabled = false;
                 button1.Enabled = true;
-
                 label3.Text = "Build: " + File.ReadAllText("build.txt");
             }
             else
             {
                 button3.Enabled = true;
                 button1.Enabled = false;
-
                 label3.Text = "Ready for install";
             }
 
             try
             {
                 string url = "https://raw.githubusercontent.com/EndermanPC/test/main/changelog.txt";
-
                 using (var webClient = new WebClient())
                 {
                     richTextBox1.Text = webClient.DownloadString(url);
@@ -47,7 +53,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error getting change log: {ex.Message}", "Exception Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowNotification("Error", $"Error getting change log: {ex.Message}");
             }
         }
 
@@ -91,19 +97,19 @@ namespace Lithicsoft_Trainer_Studio_Installer
 
                             if (firstLine != localFileText)
                             {
-                                MessageBox.Show("An update is available. Please update the new version.", "Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                ShowNotification("Update Available", "An update is available. Please update the new version.");
                             }
                         }
                         else
                         {
-                            MessageBox.Show("An update is available. Please update the new version.", "Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            ShowNotification("Update Available", "An update is available. Please update the new version.");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error checking for updates: {ex.Message}", "Exception Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowNotification("Error", $"Error checking for updates: {ex.Message}");
             }
         }
 
@@ -116,7 +122,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error updating Lithicsoft Trainer Studio: {ex.Message}", "Exception Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowNotification("Error", $"Error updating Lithicsoft Trainer Studio: {ex.Message}");
             }
         }
 
@@ -129,7 +135,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error installing Lithicsoft Trainer Studio: {ex.Message}", "Exception Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowNotification("Error", $"Error installing Lithicsoft Trainer Studio: {ex.Message}");
             }
         }
 
@@ -167,13 +173,13 @@ namespace Lithicsoft_Trainer_Studio_Installer
                     if (mode == "install")
                     {
                         CreateShortcut("Lithicsoft Trainer Studio", Path.GetFullPath(Path.Combine(destinationFolder, "Lithicsoft Trainer Studio.exe")));
-                        MessageBox.Show("Lithicsoft Trainer Studio has been installed!", "Installer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowNotification("Installation Complete", "Lithicsoft Trainer Studio has been installed!");
                         button3.Enabled = false;
                         button1.Enabled = true;
                     }
                     else if (mode == "update")
                     {
-                        MessageBox.Show("Lithicsoft Trainer Studio has been updated!", "Installer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowNotification("Update Complete", "Lithicsoft Trainer Studio has been updated!");
                     }
 
                     label3.Text = "Build: " + File.ReadAllText(localFilePath);
@@ -202,6 +208,13 @@ namespace Lithicsoft_Trainer_Studio_Installer
             startMenuShortcut.Save();
         }
 
+        private void ShowNotification(string title, string message)
+        {
+            notifyIcon.BalloonTipTitle = title;
+            notifyIcon.BalloonTipText = message;
+            notifyIcon.ShowBalloonTip(3000);
+        }
+
         private void OnClosing(object sender, CancelEventArgs cancelEventArgs)
         {
             string msg = "Do you want to exit Trainer Studio Installer?";
@@ -211,7 +224,6 @@ namespace Lithicsoft_Trainer_Studio_Installer
                 Application.Exit();
             else if (result == DialogResult.No)
                 cancelEventArgs.Cancel = true;
-
         }
     }
 }
