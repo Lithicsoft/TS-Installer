@@ -172,6 +172,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
 
                     if (mode == "install")
                     {
+                        DirectoryPermissionHelper.SetFullControlPermissions(destinationFolder);
                         CreateShortcut("Lithicsoft Trainer Studio", Path.GetFullPath(Path.Combine(destinationFolder, "Lithicsoft Trainer Studio.exe")));
                         ShowNotification("Installation Complete", "Lithicsoft Trainer Studio has been installed!");
                         button3.Enabled = false;
