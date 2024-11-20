@@ -30,7 +30,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
                 Visible = true
             };
 
-            if (File.Exists("build.txt") || Directory.Exists("Lithicsoft Trainer Studio"))
+            if (File.Exists("build.txt") && Directory.Exists("Lithicsoft Trainer Studio"))
             {
                 button3.Enabled = false;
                 button1.Enabled = true;
@@ -46,10 +46,8 @@ namespace Lithicsoft_Trainer_Studio_Installer
             try
             {
                 string url = "https://raw.githubusercontent.com/EndermanPC/test/main/changelog.txt";
-                using (var webClient = new WebClient())
-                {
-                    richTextBox1.Text = webClient.DownloadString(url);
-                }
+                using var webClient = new WebClient();
+                richTextBox1.Text = webClient.DownloadString(url);
             }
             catch (Exception ex)
             {
@@ -62,17 +60,23 @@ namespace Lithicsoft_Trainer_Studio_Installer
             CheckForUpdates();
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private async void Button1_Click(object sender, EventArgs e)
         {
             button1.Enabled = false;
-            await UpdateTrainerStudio();
+            await Task.Run(() =>
+            {
+                UpdateTrainerStudio();
+            });
             button1.Enabled = true;
         }
 
-        private async void button3_Click(object sender, EventArgs e)
+        private async void Button3_Click(object sender, EventArgs e)
         {
             button3.Enabled = false;
-            await InstallTrainerStudio();
+            await Task.Run(() =>
+            {
+                InstallTrainerStudio();
+            });
         }
 
         private void CheckForUpdates()
@@ -82,28 +86,26 @@ namespace Lithicsoft_Trainer_Studio_Installer
                 string url = "https://raw.githubusercontent.com/EndermanPC/test/main/update.txt";
                 string localFilePath = "build.txt";
 
-                using (var webClient = new WebClient())
+                using var webClient = new WebClient();
+                string fileContents = webClient.DownloadString(url);
+                string[] lines = fileContents.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+                if (lines.Length > 0)
                 {
-                    string fileContents = webClient.DownloadString(url);
-                    string[] lines = fileContents.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    string firstLine = lines[0];
 
-                    if (lines.Length > 0)
+                    if (File.Exists(localFilePath))
                     {
-                        string firstLine = lines[0];
+                        string localFileText = File.ReadAllText(localFilePath);
 
-                        if (File.Exists(localFilePath))
-                        {
-                            string localFileText = File.ReadAllText(localFilePath);
-
-                            if (firstLine != localFileText)
-                            {
-                                ShowNotification("Update Available", "An update is available. Please update the new version.");
-                            }
-                        }
-                        else
+                        if (firstLine != localFileText)
                         {
                             ShowNotification("Update Available", "An update is available. Please update the new version.");
                         }
+                    }
+                    else
+                    {
+                        ShowNotification("Update Available", "An update is available. Please update the new version.");
                     }
                 }
             }
@@ -113,7 +115,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             }
         }
 
-        private async Task UpdateTrainerStudio()
+        private async void UpdateTrainerStudio()
         {
             try
             {
@@ -126,17 +128,27 @@ namespace Lithicsoft_Trainer_Studio_Installer
             }
         }
 
-        private async Task InstallTrainerStudio()
+        private async void InstallTrainerStudio()
         {
             try
             {
-                var progress = new Progress<int>(value => progressBar1.Value = value);
+                var progress = new Progress<int>(value => UpdateProgress(value));
                 await PerformUpdateOrInstall("install", progress);
             }
             catch (Exception ex)
             {
                 ShowNotification("Error", $"Error installing Lithicsoft Trainer Studio: {ex.Message}");
             }
+        }
+
+        private void UpdateProgress(int value)
+        {
+            if (InvokeRequired)
+            {
+                Invoke((Action<int>)UpdateProgress, value);
+                return;
+            }
+            progressBar1.Value = value;
         }
 
         private async Task PerformUpdateOrInstall(string mode, IProgress<int> progress)
@@ -146,45 +158,43 @@ namespace Lithicsoft_Trainer_Studio_Installer
             string localFilePath = "build.txt";
             string destinationFolder = "Lithicsoft Trainer Studio";
 
-            using (var webClient = new WebClient())
+            using var webClient = new WebClient();
+            string fileContents = await webClient.DownloadStringTaskAsync(url);
+            string[] lines = fileContents.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+            if (lines.Length > 0)
             {
-                string fileContents = await webClient.DownloadStringTaskAsync(url);
-                string[] lines = fileContents.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                string firstLine = lines[0];
+                string secondLine = lines.Length > 1 ? lines[1] : string.Empty;
 
-                if (lines.Length > 0)
+                File.WriteAllText(localFilePath, firstLine);
+
+                string fileToDownload = secondLine;
+                string zipFilePath = "downloaded.zip";
+
+                progress.Report(20);
+                await webClient.DownloadFileTaskAsync(new Uri(fileToDownload), zipFilePath);
+                progress.Report(50);
+                ZipFile.ExtractToDirectory(zipFilePath, destinationFolder, overwriteFiles: true);
+                progress.Report(90);
+
+                File.Delete(zipFilePath);
+                progress.Report(100);
+
+                if (mode == "install")
                 {
-                    string firstLine = lines[0];
-                    string secondLine = lines.Length > 1 ? lines[1] : string.Empty;
-
-                    File.WriteAllText(localFilePath, firstLine);
-
-                    string fileToDownload = secondLine;
-                    string zipFilePath = "downloaded.zip";
-
-                    progress.Report(20);
-                    await webClient.DownloadFileTaskAsync(new Uri(fileToDownload), zipFilePath);
-                    progress.Report(50);
-                    ZipFile.ExtractToDirectory(zipFilePath, destinationFolder, overwriteFiles: true);
-                    progress.Report(90);
-
-                    File.Delete(zipFilePath);
-                    progress.Report(100);
-
-                    if (mode == "install")
-                    {
-                        DirectoryPermissionHelper.SetFullControlPermissions(destinationFolder);
-                        CreateShortcut("Lithicsoft Trainer Studio", Path.GetFullPath(Path.Combine(destinationFolder, "Lithicsoft Trainer Studio.exe")));
-                        ShowNotification("Installation Complete", "Lithicsoft Trainer Studio has been installed!");
-                        button3.Enabled = false;
-                        button1.Enabled = true;
-                    }
-                    else if (mode == "update")
-                    {
-                        ShowNotification("Update Complete", "Lithicsoft Trainer Studio has been updated!");
-                    }
-
-                    label3.Text = "Build: " + File.ReadAllText(localFilePath);
+                    DirectoryPermissionHelper.SetFullControlPermissions(destinationFolder);
+                    CreateShortcut("Lithicsoft Trainer Studio", Path.GetFullPath(Path.Combine(destinationFolder, "Lithicsoft Trainer Studio.exe")));
+                    ShowNotification("Installation Complete", "Lithicsoft Trainer Studio has been installed!");
+                    button3.Enabled = false;
+                    button1.Enabled = true;
                 }
+                else if (mode == "update")
+                {
+                    ShowNotification("Update Complete", "Lithicsoft Trainer Studio has been updated!");
+                }
+
+                label3.Text = "Build: " + File.ReadAllText(localFilePath);
             }
         }
 
@@ -196,7 +206,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
             string desktopShortcutLocation = Path.Combine(desktopPath, $"{shortcutName}.lnk");
             string startMenuShortcutLocation = Path.Combine(startMenuPath, $"{shortcutName}.lnk");
 
-            WshShell shell = new WshShell();
+            WshShell shell = new();
 
             IWshShortcut desktopShortcut = (IWshShortcut)shell.CreateShortcut(desktopShortcutLocation);
             desktopShortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
