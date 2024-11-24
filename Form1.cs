@@ -63,20 +63,32 @@ namespace Lithicsoft_Trainer_Studio_Installer
         private async void Button1_Click(object sender, EventArgs e)
         {
             button1.Enabled = false;
-            await Task.Run(() =>
+            try
             {
-                UpdateTrainerStudio();
-            });
-            button1.Enabled = true;
+                await Task.Run(() => UpdateTrainerStudio());
+            }
+            catch (Exception ex)
+            {
+                ShowNotification("Error", $"Update failed: {ex.Message}");
+            }
+            finally
+            {
+                button1.Enabled = true;
+            }
         }
 
         private async void Button3_Click(object sender, EventArgs e)
         {
             button3.Enabled = false;
-            await Task.Run(() =>
+            try
             {
-                InstallTrainerStudio();
-            });
+                await Task.Run(() => InstallTrainerStudio());
+                button1.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                ShowNotification("Error", $"Install failed: {ex.Message}");
+            }
         }
 
         private void CheckForUpdates()
@@ -88,25 +100,23 @@ namespace Lithicsoft_Trainer_Studio_Installer
 
                 using var webClient = new WebClient();
                 string fileContents = webClient.DownloadString(url);
-                string[] lines = fileContents.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+                string[] lines = fileContents.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (lines.Length > 0)
                 {
-                    string firstLine = lines[0];
+                    string latestBuild = lines[0];
 
                     if (File.Exists(localFilePath))
                     {
-                        string localFileText = File.ReadAllText(localFilePath);
-
-                        if (firstLine != localFileText)
+                        string localBuild = File.ReadAllText(localFilePath);
+                        if (latestBuild == localBuild)
                         {
-                            ShowNotification("Update Available", "An update is available. Please update the new version.");
+                            ShowNotification("Up-to-Date", "Trainer Studio is already up-to-date.");
+                            return;
                         }
                     }
-                    else
-                    {
-                        ShowNotification("Update Available", "An update is available. Please update the new version.");
-                    }
+
+                    ShowNotification("Update Available", "An update is available. Please update to the new version.");
                 }
             }
             catch (Exception ex)
@@ -119,7 +129,7 @@ namespace Lithicsoft_Trainer_Studio_Installer
         {
             try
             {
-                var progress = new Progress<int>(value => progressBar1.Value = value);
+                var progress = new Progress<int>(value => UpdateProgress(value));
                 await PerformUpdateOrInstall("update", progress);
             }
             catch (Exception ex)
@@ -160,20 +170,19 @@ namespace Lithicsoft_Trainer_Studio_Installer
 
             using var webClient = new WebClient();
             string fileContents = await webClient.DownloadStringTaskAsync(url);
-            string[] lines = fileContents.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = fileContents.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length > 0)
             {
-                string firstLine = lines[0];
-                string secondLine = lines.Length > 1 ? lines[1] : string.Empty;
+                string latestBuild = lines[0];
+                string downloadUrl = lines.Length > 1 ? lines[1] : string.Empty;
 
-                File.WriteAllText(localFilePath, firstLine);
+                File.WriteAllText(localFilePath, latestBuild);
 
-                string fileToDownload = secondLine;
                 string zipFilePath = "downloaded.zip";
 
                 progress.Report(20);
-                await webClient.DownloadFileTaskAsync(new Uri(fileToDownload), zipFilePath);
+                await webClient.DownloadFileTaskAsync(new Uri(downloadUrl), zipFilePath);
                 progress.Report(50);
                 ZipFile.ExtractToDirectory(zipFilePath, destinationFolder, overwriteFiles: true);
                 progress.Report(90);
@@ -208,15 +217,17 @@ namespace Lithicsoft_Trainer_Studio_Installer
 
             WshShell shell = new();
 
-            IWshShortcut desktopShortcut = (IWshShortcut)shell.CreateShortcut(desktopShortcutLocation);
-            desktopShortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
-            desktopShortcut.TargetPath = targetFileLocation;
-            desktopShortcut.Save();
+            void ConfigureShortcut(string shortcutPath)
+            {
+                IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+                shortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
+                shortcut.TargetPath = targetFileLocation;
+                shortcut.WorkingDirectory = Path.GetDirectoryName(targetFileLocation);
+                shortcut.Save();
+            }
 
-            IWshShortcut startMenuShortcut = (IWshShortcut)shell.CreateShortcut(startMenuShortcutLocation);
-            startMenuShortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
-            startMenuShortcut.TargetPath = targetFileLocation;
-            startMenuShortcut.Save();
+            ConfigureShortcut(desktopShortcutLocation);
+            ConfigureShortcut(startMenuShortcutLocation);
         }
 
         private void ShowNotification(string title, string message)
