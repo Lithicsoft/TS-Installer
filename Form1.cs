@@ -222,7 +222,11 @@ namespace Lithicsoft_Trainer_Studio_Installer
                 IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
                 shortcut.Description = "Shortcut for Lithicsoft Trainer Studio";
                 shortcut.TargetPath = targetFileLocation;
-                shortcut.WorkingDirectory = Path.GetDirectoryName(targetFileLocation);
+                string? workingLocation = Path.GetDirectoryName(targetFileLocation);
+                if (workingLocation != null)
+                {
+                    shortcut.WorkingDirectory = Path.GetFullPath(workingLocation);
+                }
                 shortcut.Save();
             }
 
